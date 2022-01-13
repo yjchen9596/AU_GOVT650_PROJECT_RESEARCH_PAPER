@@ -1,0 +1,485 @@
+---
+title: "analysis"
+author: "Yuka Chen"
+date: "11/23/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(purrr)
+library(ggThemeAssist)
+library(esquisse)
+library(formattable)
+require(foreign)
+require(ggplot2)
+require(MASS)
+require(Hmisc)
+require(reshape2)
+```
+
+```{r}
+##load data 
+library(readr)
+presurvey <- read_csv("~/Desktop/GOVT650/ResearchProject/Data/oragnized data/presurvey.csv")
+```
+
+
+```{r}
+
+pre_survey %>% 
+  filter(Citizen_or_not == "(1) Citizen", Foreign_born_or_Not =="(0) Native") %>% ## filter to find 
+  count(Registered_or_not)
+
+total <- sum(808+99+5+2)
+
+n_percent_registered <- (808 / total) * 100
+n_percent_notregister <- (99 / total) * 100
+n_percent_notesure <- (5 / total) * 100
+n_percent_notelegible <- (2 / total) * 100
+
+n_percent_registered
+n_percent_notregister
+n_percent_notesure 
+n_percent_notelegible
+
+
+pre_survey %>% 
+  filter(Citizen_or_not == "(1) Citizen", Foreign_born_or_Not =="(1) Foreign") %>% 
+  count(Registered_or_not)
+
+total1 <- sum(1665+378+26+2)
+f_percent_registered <- (1665 / total1) * 100
+f_percent_notregister <- (378 / total1) * 100
+f_percent_notesure <- (26 / total1) * 100
+f_percent_notelegible <- (2 / total1) * 100
+f_percent_registered
+f_percent_notregister
+f_percent_notesure 
+f_percent_notelegible
+
+##the graph shows the porportion of native born american citizens and naturalized citizens. 
+##It seems that naturalized citizens plan to votes mores as (4) not sure, havent thought about it is less
+
+pre_survey %>% 
+  filter(Registered_or_not == "(1) Yes, Registered", Citizen_or_not == "(1) Citizen") %>%
+  count(Foreign_born_or_Not) -> y
+
+pre_survey %>% 
+  filter(Registered_or_not == "(2) Not Registered",Citizen_or_not == "(1) Citizen") %>%
+  count(Foreign_born_or_Not) -> n
+
+pre_survey %>% 
+  filter(Registered_or_not == "(3) DO NOT READ  Not Sure Currently Registered",Citizen_or_not == "(1) Citizen") %>%
+  count(Foreign_born_or_Not) -> n
+
+Registered_vote_citizens <- matrix(c(808, 1665,99,378),nrow = 2, ncol = 2, byrow = TRUE)
+rownames(Registered_vote_citizens) <- c("Native Born Citizen","Naturalized Citizen")
+colnames(Registered_vote_citizens) <- c("Registered to Vote","Not register to Vote")
+
+chisq.test(Registered_vote_citizens)
+
+yes_registered <- 808*1665
+no_registered <- 99*378
+yes_register1 <- 808/yes_registered
+no_registered1 <- 99/no_registered
+proportions_difference <- yes_register1 - no_registered1
+proportions_difference
+
+odds_ratio <- (808*378)/(99*1665)
+odds_ratio
+
+chi_test_registered <- matrix(c(808,1665,99,378))
+```
+
+\newpage
+
+#2.	the longer the Naturalized American stay in US, the more likely plan to vote
+a.	Independent: Naturalized American’s year of arriving US 
+b.	Dependent: Opinions/Plan to vote.
+c.	S9, Q1.1, Q8_18, Q1.2, Q1.4 
+
+```{r}
+pre_survey %>% 
+  filter(Citizen_or_not == "(1) Citizen",Foreign_born_or_Not == "(1) Foreign", Registered_or_not == "(1) Yes, Registered") %>% 
+  mutate(Registered_or_not = recode(Registered_or_not,
+                                      `(2) Not Registered`  = "Not Registered",
+                                      `(1) Yes, Registered` = "Yes, Registered",
+                                      `(3) DO NOT READ  Not Sure Currently Registered` = "Not Sure Currently Registered",
+                                      `(4) DO NOT READ  Not eligible to vote/register` = "Not eligible to vote/register")) %>% 
+  drop_na(Registered_or_not)-> naturalized_vote ## registered naturalized citizens
+
+naturalized_vote %>% 
+  ggplot(aes(x = Year_In_US,
+           fill = Registered_or_not)) + 
+  geom_bar()+
+  labs(x = "Year Arrived in U.S.", y = "Numbers of Natualized Citizen Plan to Vote",
+    fill = "Registered")
+
+pre_survey %>% 
+  ggplot(aes(x = Year_In_US,
+           y = Registered_or_not)) + 
+  geom_boxplot()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+naturalized_vote %>% 
+  drop_na(Likely_vote) %>% 
+  ggplot(aes(x = Year_In_US, fill =Likely_vote))+
+  geom_bar()+
+  theme_minimal()+
+    labs(x = "Year Arrived in U.S.", y = "Numbers of Natualized Citizen",
+    fill = "Likely to Vote")
+#########)+
+  labs(x = "Year arrived in US", fill = "Likely Vote")
+
+summary(naturalized_vote$Year_In_US)
+
+#########
+```
+
+
+```{r}
+library(ggplot2)
+library(ggridges)
+
+
+naturalized_vote %>% 
+   filter(Citizen_or_not == "(1) Citizen",Foreign_born_or_Not == "(1) Foreign") %>% 
+  mutate(Likely_vote = recode(Likely_vote,
+                             `(1) I am absolutely certain I will vote` = "I am absolutely certain I will vote",     
+                             `(2) I am pretty likely to vote` = "I am pretty likely to vote",
+                             `(5) I will not vote this year` = "I will not vote this year",
+                             `(4) My chances of voting are less than 50-50` = "My chances of voting are less than 50-50",
+                             `(3) My chances of voting are 50-50` = "3")) -> fact_vote1
+pre_survey %>% 
+ggplot(aes(x = Year_In_US, y = Likely_vote,fill = Citizen_or_not)) +
+  geom_density_ridges() + 
+  theme_ridges() +
+  theme(legend.position = "none")
+
+
+library(ggbeeswarm)
+library(scales)
+fact_vote1 %>% 
+ggplot(aes( x = factor(Likely_vote,
+                      labels = c( "I am absolutely certain I will vote", "I am pretty likely to vote", "My chances of voting are 50-50", "My chances of voting are less than 50-50","I will not vote this year")), 
+            y = Year_In_US,
+           color = Likely_vote)) +
+  geom_quasirandom(alpha = 0.7,
+                   size = 1.5)+
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  theme(legend.position = "none")
+
+pre_survey %>% 
+ggplot(aes(x = Year_In_US, y = Likely_vote, color = Foreign_born_or_Not)) +
+  geom_jitter(alpha = 0.7,
+              size = 1.5)+
+  theme_minimal() +
+  theme(legend.position = "none")
+
+
+lapply(fact_vote1, FUN=summary)
+```
+
+
+```{r}
+####### Before 1985
+##"I am absolutely certain I will vote" percentage : 36.45%
+fact_vote_analysis1 <- fact_vote1 %>% 
+  filter(Likely_vote == "I am absolutely certain I will vote", Year_In_US < 1985)
+fact_vote_analysis11 <- (nrow(fact_vote_analysis1)/nrow(fact_vote1))*100
+fact_vote_analysis11
+##"I am pretty likely to vote" percentage: 3.12%
+fact_vote_analysis2 <- fact_vote1 %>% 
+  filter(Likely_vote == "I am pretty likely to vote", Year_In_US < 1985)
+fact_vote_analysis22 <- (nrow(fact_vote_analysis2)/nrow(fact_vote1))*100
+fact_vote_analysis22
+##"My chances of voting are 50-50" percentage: 0%
+fact_vote_analysis3 <- fact_vote1 %>% 
+  filter(Likely_vote == "My chances of voting are 50-50", Year_In_US < 1985)
+fact_vote_analysis33 <- (nrow(fact_vote_analysis3)/nrow(fact_vote1))*100
+fact_vote_analysis33
+##"My chances of voting are less than 50-50": 1.14%
+fact_vote_analysis4 <- fact_vote1 %>% 
+  filter(Likely_vote == "My chances of voting are less than 50-50", Year_In_US < 1985)
+fact_vote_analysis44 <- (nrow(fact_vote_analysis4)/nrow(fact_vote1))*100
+fact_vote_analysis44
+##"I will not vote this year": 1.26% 
+fact_vote_analysis5 <- fact_vote1 %>% 
+  filter(Likely_vote == "I will not vote this year", Year_In_US < 1985)
+fact_vote_analysis55 <- (nrow(fact_vote_analysis5)/nrow(fact_vote1))*100
+fact_vote_analysis55
+```
+
+
+```{r}
+########## after 1985
+
+##"I am absolutely certain I will vote" percentage : 33.33%
+fact_vote_analysis111 <- fact_vote1 %>% 
+  filter(Likely_vote == "I am absolutely certain I will vote", Year_In_US > 1985)
+fact_vote_analysis1111 <- (nrow(fact_vote_analysis111)/nrow(fact_vote1))*100
+fact_vote_analysis1111
+##"I am pretty likely to vote" percentage: 4.86%
+fact_vote_analysis222 <- fact_vote1 %>% 
+  filter(Likely_vote == "I am pretty likely to vote", Year_In_US > 1985)
+fact_vote_analysis2222 <- (nrow(fact_vote_analysis222)/nrow(fact_vote1))*100
+fact_vote_analysis2222
+##"My chances of voting are 50-50" percentage: 0%
+fact_vote_analysis333 <- fact_vote1 %>% 
+  filter(Likely_vote == "My chances of voting are 50-50", Year_In_US > 1985)
+fact_vote_analysis3333 <- (nrow(fact_vote_analysis33)/nrow(fact_vote1))*100
+fact_vote_analysis3333
+##"My chances of voting are less than 50-50": 1.38%
+fact_vote_analysis444 <- fact_vote1 %>% 
+  filter(Likely_vote == "My chances of voting are less than 50-50", Year_In_US > 1985)
+fact_vote_analysis4444 <- (nrow(fact_vote_analysis444)/nrow(fact_vote1))*100
+fact_vote_analysis4444
+##"I will not vote this year": 1.14%
+fact_vote_analysis555 <- fact_vote1 %>% 
+  filter(Likely_vote == "I will not vote this year", Year_In_US > 1985)
+fact_vote_analysis5555 <- (nrow(fact_vote_analysis555)/nrow(fact_vote1))*100
+fact_vote_analysis5555
+```
+
+
+```{r}
+#Exploratory data analysis </span>
+#Summarizing the data
+naturalized_vote %>% 
+  dplyr::select(Likely_vote, Registered_or_not, Foreign_born_or_Not) -> naturalized_vote2
+summary(naturalized_vote2)
+
+naturalized_vote2
+library("nnet")
+test <- multinom(Likely_vote ~ Year_In_US, data = pre_survey)
+summary(test)
+
+###########
+fact_vote1 %>% 
+  factor(Likely_vote,
+                      labels = c( "I am absolutely certain I will vote", "I am pretty likely to vote", "My chances of voting are 50-50", "My chances of voting are less than 50-50","I will not vote this year"))
+
+model_sex <- lm(Likely_vote ~ Year_In_US, data = pre_survey)
+summary(model_sex)$coef
+
+
+naturalized_vote %>% 
+   filter(Citizen_or_not == "(1) Citizen",Foreign_born_or_Not == "(1) Foreign") %>% 
+  mutate(Likely_vote_dummy = recode(Likely_vote,
+                             `(1) I am absolutely certain I will vote` = "1",     
+                             `(2) I am pretty likely to vote` = "2",
+                             `(5) I will not vote this year` = "3",
+                             `(4) My chances of voting are less than 50-50` = "4",
+                             `(3) My chances of voting are 50-50` = "3")) -> naturalized_likely_vote_dummy
+
+##turn every variables into factors
+naturalized_likely_vote_dummy %>% 
+  mutate(across(where(is.factor), as.character)) -> naturalized_likely_vote_dummy2
+model_likely <- lm(Likely_vote_dummy ~ Year_In_US, data = naturalized_likely_vote_dummy2)
+summary(model_likely)$coef
+
+##change all variables into numerical
+naturalized_likely_vote_dummy %>% 
+mutate(across(where(is.numeric), function(x) tidyr::replace_na(x, 0))) ->naturalized_likely_vote_dummy3
+cor(naturalized_likely_vote_dummy3[,c("Likely_vote_dummy", "Year_In_US")])
+model_likely <- lm(Likely_vote_dummy ~ Year_In_US, data = naturalized_likely_vote_dummy2)
+summary(model_likely)$coef
+
+model_likely_anova <- aov(Likely_vote_dummy ~ Year_In_US, data = naturalized_likely_vote_dummy2)
+
+summary(model_likely_anova)
+t.test(Likely_vote_dummy ~ Year_In_US, data = naturalized_likely_vote_dummy2)
+```
+
+
+```{r}
+## the average of year of arrival of naturalized citizens who planned to vote is 1985. 
+##The earliest was 1918. The year of arrival has the most people is 1980.
+
+
+
+
+naturalized_vote %>% 
+  mutate(Likely_vote = recode(Likely_vote,
+                             `(1) I am absolutely certain I will vote` = "1",     
+                             `(2) I am pretty likely to vote` = "2",
+                             `(5) I will not vote this year` = "5",
+                             `(4) My chances of voting are less than 50-50` = "4",
+                             `(3) My chances of voting are 50-50` = "3")) -> fact_vote
+
+
+
+fact_vote$Likely_vote.f = factor(fact_vote$Likely_vote,
+                            ordered = TRUE,
+                            levels = c("1", "2", "3", "4", "5"))
+
+lm_likely <- lm(fact_vote$Likely_vote ~ Year_In_US, data = fact_vote$Likely_vote.f)
+summary(lm_likely)
+
+unique(naturalized_vote$Likely_vote)
+
+```
+
+
+
+```{r}
+Mode <- function(x) {
+    ux <- unique(x)
+    ux[which.max(tabulate(match(x, ux)))]
+}
+
+Mode(naturalized_vote$Year_In_US)
+
+## Because the mean is 1985 and the mode is 1980, I decided to add 5 years more to 1985 and reduce 5 years to 1975 to find out if people arrived earlier would tend to vote more comparing to those who arrive in the recent year
+
+
+pre_survey %>% 
+  filter(Citizen_or_not == "(1) Citizen",Foreign_born_or_Not == "(1) Foreign") %>% 
+  mutate(Registered_or_not = recode(Registered_or_not,
+                                      `(2) Not Registered`  = "Not Registered",
+                                      `(1) Yes, Registered` = "Yes, Registered",
+                                      `(3) DO NOT READ  Not Sure Currently Registered` = "Not Sure Currently Registered",
+                                      `(4) DO NOT READ  Not eligible to vote/register` = "Not eligible to vote/register")) %>% 
+  drop_na(Registered_or_not) -> naturalized_year
+naturalized_year %>% 
+  filter(Year_In_US > 1985 | Year_In_US < 1985) %>% 
+  mutate(Arrival = ifelse(Year_In_US > 1985, "After 1985", "Before 1985")) %>% 
+  ggplot(aes(x = Arrival, fill = Registered_or_not)) +
+  geom_bar(position = "fill")
+
+naturalized_year %>% 
+  filter(Year_In_US > 1985 | Year_In_US < 1985) %>% 
+  mutate(Arrival = ifelse(Year_In_US > 1985, "After 1985", "Before 1985")) %>% 
+  ggplot(aes(x = Arrival, fill = Likely_vote)) +
+  geom_bar(position = "fill")
+
+
+##from the graphs we can see that porportion of people who registered voting are mostly arrived before 1975.
+
+
+```
+
+
+
+
+\newpage
+#3.	immigrant who plan to vote are the people who talk politics.
+a.	Independent: Immigration status + absolutely plan to vote
+b.	Dependent: Yes/No on discussing politics with family and friends
+c.	Q1.4 (status), Q1.4, Q5.1.1
+
+
+
+```{r}
+pre_survey %>% 
+  filter(Citizen_or_not == "(1) Citizen",Foreign_born_or_Not == "(1) Foreign", Registered_or_not == "(1) Yes, Registered" | Likely_vote == "(1) I am absolutely certain I will vote") %>% 
+  mutate(Registered_or_not = recode(Registered_or_not,
+                                      `(2) Not Registered`  = "Not Registered",
+                                      `(1) Yes, Registered` = "Yes, Registered",
+                                      `(3) DO NOT READ  Not Sure Currently Registered` = "Not Sure Currently Registered",
+                                      `(4) DO NOT READ  Not eligible to vote/register` = "Not eligible to vote/register"),
+        Foreign_born_or_Not = recode(Foreign_born_or_Not,
+                                     `(1) Foreign` = "Naturalized Citizen Who Planned on Voting")) %>% drop_na(Registered_or_not) -> vote_immigrant_talk
+
+vote_immigrant_talk %>% 
+  mutate(Often_discuss_poltics = recode(Often_discuss_poltics,
+                                      `(3) Somewhat often` = "Somewhat often",
+                                      `(1) Not at all`  = "Not at all",   
+                                      `(2) Not too often` = "Not too often",
+                                      `(4) Very often` = "Very often")) %>% 
+  drop_na(Often_discuss_poltics) %>% 
+  ggplot(aes(x = Foreign_born_or_Not, fill = Often_discuss_poltics))+
+  geom_bar(position = "dodge")+
+  labs(x = "Immigrants Who Planned on Voting",
+    y = "Numbers of Voting Decisions", fill = "Frequency on Political Discussion w/ Family")
+
+vote_immigrant_talk %>% 
+    mutate(Interested_In_Politics = recode(Interested_In_Politics,
+                                      `(1) Not at all interested` = "Not at all interested",
+                                      `(2) Somewhat interested`  = "Somewhat interested",   
+                                      `(3) Interested` = "Interested",
+                                      `(4) Very interested` = "Very interested")) %>% 
+  drop_na(Interested_In_Politics) %>% 
+  ggplot(aes(x = Foreign_born_or_Not, fill = Interested_In_Politics))+
+  geom_bar(position = "dodge")+labs(x = "Immigrants Who Planned on Voting",
+    y = "Numbers of Voting Decisions", fill = "Interests in Politics") -> v3
+v3
+
+pie <- v3 + coord_polar("y", start=0)
+pie
+
+## From the graphs, we found the immigrants that plan on voting do not discuss politics with their family often, however, majority of them are somewhat interested in politics
+```
+
+
+```{r}
+
+vote_immigrant_talk %>% 
+  count(Interested_In_Politics)
+
+
+total <- length(vote_immigrant_talk$Foreign_born_or_Not)
+
+
+percent_Not_at_all_interested <- (242 / total) * 100
+percent_Somewhat_interested <- (570 / total) * 100
+percent_Interested <- (504 / total) * 100
+percent_Very_interested <- (393 / total) * 100
+
+percent_Not_at_all_interested 
+percent_Somewhat_interested
+percent_Interested
+percent_Very_interested
+
+
+
+##Not at all interested: 14% 
+##Somewhat_interested: 33%
+##Interested: 29%
+##Very_interested: 22.86
+```
+
+\newpage
+#4.	American who were born in US talk more politics than foreign born American/Naturalized American. 
+a.	Independent: Type of American
+b.	Dependent: interested in politics or not
+c.	S9, Q1.4 (status), Q5.1.1
+
+\newpage
+#5.	American who identified as Asian American talk less politics and are the least ethnic group plan on voting.
+a.	Independent: ethnicity 
+b.	Dependent: interested in politics or not
+c.	S10, S10_601, Q1.4 (status), Q5.1.1
+
+```{r}
+pre_survey %>% 
+  filter(Citizen_or_not == "(1) Citizen") %>% 
+  mutate(Foreign_born_or_Not = recode(Foreign_born_or_Not,
+                                     `(0) Native` = "America Born Citizen",
+                                     `(1) Foreign`= "Naturalized Citizen"),
+         Often_discuss_poltics = recode(Often_discuss_poltics,
+                                      `(3) Somewhat often` = "Somewhat often",
+                                      `(1) Not at all`  = "Not at all",   
+                                      `(2) Not too often` = "Not too often",
+                                      `(4) Very often` = "Very often"))%>% 
+  drop_na(Often_discuss_poltics) -> a
+a %>% 
+  ggplot(aes(x = Foreign_born_or_Not,
+           fill = Often_discuss_poltics)) + 
+  geom_bar(position = "fill")
+```
+```{r}
+pre_survey %>% 
+  filter(Citizen_or_not == "(1) Citizen") %>% 
+  mutate(Foreign_born_or_Not = recode(Foreign_born_or_Not,
+                                     `(0) Native` = 0,
+                                     `(1) Foreign`= 1),
+         Often_discuss_poltics = recode(Often_discuss_poltics,
+                                      `(3) Somewhat often` = 1,
+                                      `(1) Not at all`  = 0,   
+                                      `(2) Not too often` = 0,
+                                      `(4) Very often` = 1)) 
+```
+

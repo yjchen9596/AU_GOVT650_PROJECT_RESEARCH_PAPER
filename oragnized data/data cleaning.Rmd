@@ -1,0 +1,117 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(ggThemeAssist)
+
+```
+
+```{r}
+##load dataset
+load("~/Desktop/GOVT650/ResearchProject/Data/pre-National Asian American Survey (NAAS) Pre-Election Survey, 2016/DS0001/37024-0001-Data.rda")
+
+pre_survey1 <- da37024.0001
+
+pre_survey <- pre_survey1 %>% 
+   dplyr::select("YOUTH","RACEETH","STNAME", "S7","S9","FORBORN","S10_1","RACE", "Q1_3A","Q1_4","CITIZEN", "NATURALIZED","Q3_1","Q3_2_0","Q4_1","Q4_2","Q4_3A","Q5_1_01","PID4","Q8_2","Q8_5A","Q8_5B","Q8_701","Q8_18","Q8_21","Q8_22") %>% 
+  filter(S10_1 != "(00) None of the above/Not Asian or Pacific Islander", S10_1!="(30) Other Asian  SPECIFY", Q8_18 != "9999", Q8_18 != "8888") %>% 
+  mutate(S10_1 = recode(S10_1,
+                        `(02) Cambodian` = "Cambodian",
+                        `(03) Chinese` = "Chinese",
+                        `(06) Indian` = "Indian",
+                        `(04) Filipino` =  "Filipino",
+                        `(07) Japanese` = "Japanese",
+                        `(08) Korean` = "Korean",
+                        `(11) Vietnamese` = "Vietnamese",
+                        `(13) Samoan` = "Samoan",
+                        `(12) Native Hawaiian` = "Native Hawaiian",
+                        `(25) Tongan` = "Tongan",
+                        `(05) Hmong` = "Hmong",
+                        `(16) Fijian` = "Fijian",
+                        `(23) Taiwanese` = "Taiwanese",
+                        `(09) Laotian` = "Laotian"),
+        S7 = recode(S7, 
+        `(2) Female` = "Female",
+        `(1) Male` = "Male",
+        `(3) Something else` = "Other Gender")) %>% 
+  rename("Gender" = S7,
+          "Ethnicity" = RACEETH,
+          "State_Name" = STNAME,
+          "Birth_of_Place"= S9, 
+          "Foreign_born_or_Not"= FORBORN,
+          "Background_Asian"= S10_1,
+          "Race" = RACE,
+          "Country_Of_Birth" = Q1_3A,
+          "Visa_Status" = Q1_4,
+          "Citizen_or_not"= CITIZEN,
+          "Naturalized_or_not"= NATURALIZED,
+          "Interested_In_Politics" = Q3_1,
+          "Registered_or_not"= Q4_1,
+          "Likely_vote" = Q4_2,
+          "Plan_to_vote" = Q4_3A,
+          "Discussed_politics_with_famandfriend"= Q5_1_01,
+          "Partisan_three"= PID4,
+          "Often_discuss_poltics"= Q8_2,##how often do you discuss politics with family
+          "Year_In_US"= Q8_5A, ## What year did you first come to live in the United States? 
+          "Visa_Status_nongreen"= Q8_5B,
+          "Spouse_Race_AA"= Q8_701, ##Asian american
+          "year_born" = Q8_18,
+          "english_ablitity_speak" = Q8_21, ##How well can you speak English
+          "english_ablitity_reading" = Q8_22) -> a ##How well can you read English?) 
+
+
+```
+
+
+```{r}
+b <-  a %>% 
+  dplyr::mutate(Foreign_born_or_Not = recode(Foreign_born_or_Not,
+                                     `(0) Native` = "Native Born Citizen",
+                                     `(1) Foreign`= "Foreign Born Citizen"),
+        Registered_or_not = recode(Registered_or_not,
+                   `(2) Not Registered`  = "Not Registered",
+                   `(1) Yes, Registered` = "Yes, Registered",
+                   `(3) DO NOT READ  Not Sure Currently Registered` = "Not Sure Currently Registered",
+                   `(4) DO NOT READ  Not eligible to vote/register` = "Not eligible to vote/register"),
+        Often_discuss_poltics = recode(Often_discuss_poltics,
+                                      `(3) Somewhat often` = "Somewhat often",
+                                      `(1) Not at all`  = "Not at all",   
+                                      `(2) Not too often` = "Not too often",
+                                      `(4) Very often` = "Very often"),
+        Likely_vote = recode(Likely_vote,
+              `(1) I am absolutely certain I will vote` = "I am absolutely certain I will vote",     
+              `(2) I am pretty likely to vote` = "I am pretty likely to vote",
+              `(5) I will not vote this year` = "I will not vote this year",
+              `(4) My chances of voting are less than 50-50` = "My chances of voting are less than 50-50",
+              `(3) My chances of voting are 50-50` = "My chances of voting are 50-50"),
+       Arrival = ifelse(Year_In_US > 1985, "After 1985", "Before 1985")) ->c
+
+c %>% 
+  mutate(gender_dummy = ifelse(Gender == "Male", 1, 0),
+       Youth_dummy = ifelse(YOUTH == "(1) youth", 1, 0),
+       Naturalized_or_not_dummy = ifelse(Naturalized_or_not == "(1) Naturalized", 1,0),
+       Arrival_dummy = ifelse(Arrival == "Before 1985",1,0),
+       Foreign_born_or_Not_dummy = ifelse(Foreign_born_or_Not == "Foreign Born Citizen", 1,0),
+       Registered_or_not_dummy = ifelse(Registered_or_not== "Yes, Registered", 1, 0)) ->d
+
+
+d %>% 
+  dplyr::select(gender_dummy, Youth_dummy, Arrival_dummy, Foreign_born_or_Not_dummy, Registered_or_not_dummy, Likely_vote, Often_discuss_poltics,  Interested_In_Politics,Discussed_politics_with_famandfriend,year_born, Year_In_US, Ethnicity,Citizen_or_not, Registered_or_not,Foreign_born_or_Not,YOUTH,english_ablitity_speak,english_ablitity_reading, Gender,Background_Asian) -> g
+
+
+g %>% 
+  filter(Registered_or_not != NA |Registered_or_not== "Yes, Registered"| Registered_or_not=="Not Registered") %>% 
+  mutate(Interested_In_Politics = recode(Interested_In_Politics, 
+                 `(1) Not at all interested` = "Not at all Interested",
+                 `(2) Somewhat interested` = "Somewhat Interested",
+                 `(3) Interested`= "Interested",
+                 `(4) Very interested` = "Very Interested"))-> M
+
+write.csv(M, file = "pre_survey.csv")
+
+```
+
+

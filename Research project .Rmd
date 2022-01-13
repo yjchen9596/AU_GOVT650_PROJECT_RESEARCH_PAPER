@@ -1,0 +1,42 @@
+---
+title: "GOVT650"
+author: "Yuka Chen"
+date: "9/30/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+AsianAmerican <- read.csv("/Users/yuka/Desktop/GOVT650/ResearchProject/Data/Final_Report_Asian_American.csv",header = TRUE)
+```
+
+```{r}
+colnames(AsianAmerican)
+```
+
+```{r}
+View(AsianAmerican)
+```
+
+```{r}
+library(dplyr)
+
+AsianAmerican %>% 
+  select(Language, Primary.Language,City.Election) %>% 
+  filter(Language == "English")
+```
+
+```{r}
+
+
+ImmWorkshop <- read.csv("/Users/yuka/Desktop/GOVT650/ResearchProject/Immigration_Workshops.csv",header = TRUE)
+```
+
+```{r}
+View(OneNYC)
+```
+
