@@ -42,11 +42,7 @@ a %>%
 tbl_cross(pre_survey, row=Background_Asian, col=Interested_In_Politics, percent="row")
 tbl_cross(pre_survey, row=Interested_In_Politics, col=Background_Asian, percent="row")
 
-pre_survey %>% 
-  filter(Citizen_or_not == "(1) Citizen"| Foreign_born_or_Not == "Foreign Born Citizen" | Registered_or_not == "Yes, Registered") %>% 
-  drop_na(Registered_or_not) -> foreignborn_citizen_registered
-
-foreignborn_citizen_registered %>%
+pre_survey %>%
   filter(Year_In_US >= 1940) %>% 
   mutate(Year_In_US_by_10 = ifelse(Year_In_US >= 1940 & Year_In_US < 1950, "1940 - 1949",
                             ifelse(Year_In_US >= 1950 & Year_In_US < 1960, "1950 - 1959",
@@ -56,7 +52,7 @@ foreignborn_citizen_registered %>%
                             ifelse(Year_In_US >= 1990 & Year_In_US < 2000,"1990 - 1999",
                             ifelse(Year_In_US >= 2000 & Year_In_US < 2010,"1990 - 1999",
                             ifelse(Year_In_US >= 2010 & Year_In_US <= 2020,"2010 - 2019", "2020 or Later")))))))),
-         Age = 2021 -year_born) ->xxx1
+         Age = 2021 -year_born) -> xxx1
 
 
 with(xxx1, do.call(rbind, tapply(Age, Background_Asian, function(x) c(M = mean(x), SD = sd(x))))) ##average age 
